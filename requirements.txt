@@ -1,5 +1,4 @@
 line-bot-sdk
 flask
 mysql-connector-python
-json
 datetime
