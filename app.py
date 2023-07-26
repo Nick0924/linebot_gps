@@ -1,79 +1,55 @@
-from flask import Flask, request, abort
-
-from linebot import (
-    LineBotApi, WebhookHandler
-)
-from linebot.exceptions import (
-    InvalidSignatureError
-)
-from linebot.models import *
-
-#======python的函數庫==========
-import tempfile, os
-import datetime
-import openai
-import time
-#======python的函數庫==========
-
+from flask import Flask, request
+import json
+import mysql.connector
+from linebot import LineBotApi, WebhookHandler
+from linebot.models import MessageEvent, LocationMessage, TextSendMessage
+from datetime import datetime
 app = Flask(__name__)
-static_tmp_path = os.path.join(os.path.dirname(__file__), 'static', 'tmp')
-# Channel Access Token
-line_bot_api = LineBotApi(os.getenv('CHANNEL_ACCESS_TOKEN'))
-# Channel Secret
-handler = WebhookHandler(os.getenv('CHANNEL_SECRET'))
-# OPENAI API Key初始化設定
-openai.api_key = os.getenv('OPENAI_API_KEY')
 
-
-def GPT_response(text):
-    # 接收回應
-    response = openai.Completion.create(model="text-davinci-003", prompt=text, temperature=0.5, max_tokens=500)
-    print(response)
-    # 重組回應
-    answer = response['choices'][0]['text'].replace('。','')
-    return answer
-
-
-# 監聽所有來自 /callback 的 Post Request
-@app.route("/callback", methods=['POST'])
-def callback():
-    # get X-Line-Signature header value
-    signature = request.headers['X-Line-Signature']
-    # get request body as text
+@app.route("/", methods=['POST'])
+def linebot():
+    now = datetime.now()
     body = request.get_data(as_text=True)
-    app.logger.info("Request body: " + body)
-    # handle webhook body
+    formatted_now = now.strftime("%Y-%m-%d %H:%M:%S")
+    print("現在時間:", formatted_now)                   
     try:
-        handler.handle(body, signature)
-    except InvalidSignatureError:
-        abort(400)
-    return 'OK'
+        json_data = json.loads(body)                        
+        access_token = os.getenv('CHANNEL_ACCESS_TOKEN')
+        secret =  os.getenv('CHANNEL_SECRET')
+        line_bot_api = LineBotApi(access_token)             
+        handler = WebhookHandler(secret)                    
 
+        tk = json_data['events'][0]['replyToken']           
+        user_id = json_data['events'][0]['source']['userId']
+        profile = line_bot_api.get_profile(user_id)
+        display_name = profile.display_name
 
-# 處理訊息
-@handler.add(MessageEvent, message=TextMessage)
-def handle_message(event):
-    msg = event.message.text
-    GPT_answer = GPT_response(msg)
-    print(GPT_answer)
-    line_bot_api.reply_message(event.reply_token, TextSendMessage(GPT_answer))
+        msg_type = json_data['events'][0]['message']['type']     
+        if msg_type == 'location':
+            address = json_data['events'][0]['message']['address']
+            latitude = json_data['events'][0]['message']['latitude']
+            longitude = json_data['events'][0]['message']['longitude']
+            reply = "打卡成功"
 
-@handler.add(PostbackEvent)
-def handle_message(event):
-    print(event.postback.data)
+            db = mysql.connector.connect(
+                host="192.168.8.199",
+                user="nick",
+                password="951753",
+                database="data"
+            )
+            cursor = db.cursor()
+            sql = "INSERT INTO location (username, address, latitude, longitude, time) VALUES (%s, %s, %s, %s, %s)"
+            val = (display_name, address, latitude, longitude, formatted_now)
+            cursor.execute(sql, val)
+            db.commit()
 
-
-@handler.add(MemberJoinedEvent)
-def welcome(event):
-    uid = event.joined.members[0].user_id
-    gid = event.source.group_id
-    profile = line_bot_api.get_group_member_profile(gid, uid)
-    name = profile.display_name
-    message = TextSendMessage(text=f'{name}歡迎加入')
-    line_bot_api.reply_message(event.reply_token, message)
+        else:
+            reply = '請傳送座標打卡'
         
-        
-import os
+        line_bot_api.reply_message(tk, TextSendMessage(reply)) 
+    except:
+        print(body)                                          
+    return 'OK'                                              
+
 if __name__ == "__main__":
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    app.run()
