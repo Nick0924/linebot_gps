@@ -14,8 +14,8 @@ def linebot():
     print("現在時間:", formatted_now)                   
     try:
         json_data = json.loads(body)                        
-        access_token = os.getenv('CHANNEL_ACCESS_TOKEN')
-        secret =  os.getenv('CHANNEL_SECRET')
+        access_token = 'UzV6hoOWEz0t8HfUos1jgM8jBBgh8fL0R2d7zDNbVDWrqBiskTcYQ+Nk5T+ESg2loCaDnzY0CBf4QM+75RAVM6NL1MbeVPxGdFY70f5msctPfEC9tCUBslFz9V/sdw+wTDDuzxHaFlX1M0aGI1dMxwdB04t89/1O/w1cDnyilFU='
+        secret = 'c2fed2d1feb4e9d7641bc3e8cbc42558'
         line_bot_api = LineBotApi(access_token)             
         handler = WebhookHandler(secret)                    
 
