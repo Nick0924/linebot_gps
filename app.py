@@ -29,17 +29,7 @@ def linebot():
             address = json_data['events'][0]['message']['address']
             reply = "打卡成功"
 
-            db = mysql.connector.connect(
-                host="192.168.8.199",
-                user="nick",
-                password="951753",
-                database="data"
-            )
-            cursor = db.cursor()
-            sql = "INSERT INTO location (username, address, time) VALUES (%s, %s, %s)"
-            val = (display_name, address, formatted_now)
-            cursor.execute(sql, val)
-            db.commit()
+            
 
         else:
             reply = '請傳送座標打卡'
