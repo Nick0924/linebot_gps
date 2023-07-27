@@ -27,8 +27,6 @@ def linebot():
         msg_type = json_data['events'][0]['message']['type']     
         if msg_type == 'location':
             address = json_data['events'][0]['message']['address']
-            latitude = json_data['events'][0]['message']['latitude']
-            longitude = json_data['events'][0]['message']['longitude']
             reply = "打卡成功"
 
             db = mysql.connector.connect(
@@ -38,8 +36,8 @@ def linebot():
                 database="data"
             )
             cursor = db.cursor()
-            sql = "INSERT INTO location (username, address, latitude, longitude, time) VALUES (%s, %s, %s, %s, %s)"
-            val = (display_name, address, latitude, longitude, formatted_now)
+            sql = "INSERT INTO location (username, address, time) VALUES (%s, %s, %s)"
+            val = (display_name, address, formatted_now)
             cursor.execute(sql, val)
             db.commit()
 
